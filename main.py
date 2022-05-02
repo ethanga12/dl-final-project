@@ -29,7 +29,7 @@ def train(model: keras.Model, train_inputs, train_labels, batch_size):
     for i in range (batch_size, num_entries, batch_size):
         batch_inputs = shuffled_inputs[i - batch_size: i, :, :, :]
         batch_labels = shuffled_labels[i - batch_size: i, :]
-        with tf.GradientTape as tape:
+        with tf.GradientTape() as tape:
             predictions = model.call(batch_inputs) 
             loss = model.loss(predictions, batch_labels)
         gradients = tape.gradient(loss, model.trainable_variables)
@@ -63,7 +63,7 @@ def visualize_inputs(class_names, images, labels):
         plt.subplot(5,5,i+1)
         plt.xticks([])
         plt.yticks([])
-        plt.grid(False)
+        plt.grid(True)
         plt.imshow(images[i])
         plt.xlabel(class_names[labels[i]])
     plt.show()
@@ -88,22 +88,19 @@ def load_cifar_data():
 #################
 
 def main():
+    BATCH_SIZE = 100
     class_names, train_images, train_labels, test_images, test_labels = load_cifar_data()
     # visualize_inputs(class_names, test_images, test_labels)
-    print(train_images.shape)
-
 
     model = CNNModel()
     num_epochs = 15
 
     for i in range(num_epochs): 
         indices = tf.random.shuffle(tf.Variable(np.arange(train_images.shape[0]))) 
-        train(model, tf.gather(train_images, indices), tf.gather(train_labels, indices))
+        train(model, tf.gather(train_images, indices), tf.gather(train_labels, indices), 100)
 
-    accuracy = test(model, test_images, test_labels)
+    accuracy = test(model, test_images, test_labels, 100)
     print("CNN Accuracy: ", accuracy)
-
-    pass
 
 
 if __name__ == '__main__':

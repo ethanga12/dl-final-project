@@ -20,16 +20,16 @@ class CNNModel(keras.Model):
         self.hidden_size = 100 
 
         self.model = tf.keras.Sequential()
-        self.model.add(tf.keras.layers.Conv2D(32, 3, activation='relu', input_shape=(32, 32, 3)))
-        self.model.add(tf.keras.layers.MaxPooling2D((2, 2)))
-        self.model.add(tf.keras.layers.Conv2D(64, (3, 3), activation='relu'))
-        self.model.add(tf.keras.layers.MaxPooling2D((2, 2)))
-        self.model.add(tf.keras.layers.Conv2D(64, (3, 3), activation='relu'))
-        self.model.add(tf.keras.layers.Dense(self.hidden_size))
-        self.model.add(tf.keras.layers.Dropout(0.3))
-        self.model.add(tf.keras.layers.Dense(self.hidden_size))
-        self.model.add(tf.keras.layers.Dropout(0.3))
-        self.model.add(tf.keras.layers.Dense(self.num_classes))
+        self.model.add(layers.Conv2D(32, 3, activation='relu', input_shape=(32, 32, 3)))
+        self.model.add(layers.MaxPooling2D((2, 2)))
+        self.model.add(layers.Conv2D(64, (3, 3), activation='relu'))
+        self.model.add(layers.MaxPooling2D((2, 2)))
+        self.model.add(layers.Conv2D(64, (3, 3), activation='relu'))
+        self.model.add(layers.Dense(self.hidden_size))
+        self.model.add(layers.Dropout(0.3))
+        self.model.add(layers.Dense(self.hidden_size))
+        self.model.add(layers.Dropout(0.3))
+        self.model.add(layers.Dense(self.num_classes))
 
 
     def call(self, inputs):
