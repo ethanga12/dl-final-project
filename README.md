@@ -11,6 +11,14 @@
 * [PyTorch Implementation 2 (VisionTransformer) by tahmid0007](https://github.com/tahmid0007/VisionTransformer)
 * [PyTorch Implementation (vit-pytorch) by vztu](https://github.com/lucidrains/vit-pytorch)
 
+
+### TODOs
+* Implement CNN architecture
+* Write test and train
+* Write output visualizer and metrics
+* Implement Visual Transformers architecture
+* Improve architecture
+
 ## Project Check in 3
 <!-- Just writing this in here so we can copy paste this into the devpost. This will be deleted later on - Riki -->
 

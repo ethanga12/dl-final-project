@@ -1,7 +1,6 @@
 """
 This file will contain the code specific to the CNN class
 """
-from matplotlib import pyplot as plt
 import tensorflow as tf
 from tensorflow import keras
 from keras import layers
