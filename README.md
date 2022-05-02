@@ -11,6 +11,8 @@
 * [PyTorch Implementation 2 (VisionTransformer) by tahmid0007](https://github.com/tahmid0007/VisionTransformer)
 * [PyTorch Implementation (vit-pytorch) by vztu](https://github.com/lucidrains/vit-pytorch)
 
+### Paper
+[Visual Transformers](https://arxiv.org/pdf/2006.03677.pdf)
 
 ### TODOs
 * Implement CNN architecture
