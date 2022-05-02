@@ -27,9 +27,9 @@ class CNNModel(tf.keras.Model):
         self.model.add(layers.Conv2D(64, (3, 3), activation='relu'))
         self.model.add(layers.Flatten())
         self.model.add(layers.Dense(self.hidden_size))
-        self.model.add(layers.Dropout(0.3))
+        self.model.add(layers.Dropout(0.1))
         self.model.add(layers.Dense(self.hidden_size))
-        self.model.add(layers.Dropout(0.3))
+        self.model.add(layers.Dropout(0.1))
         self.model.add(layers.Dense(self.num_classes))
 
         self.loss_object = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
@@ -46,9 +46,9 @@ class CNNModel(tf.keras.Model):
     def loss(self, logits, labels):
         # loss = tf.math.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(labels, logits)) #/ 100 #change back to batch size from 100
         loss = tf.keras.metrics.sparse_categorical_crossentropy(labels, logits, from_logits=True)
-        return loss
+        return tf.reduce_sum(loss)
 
     def accuracy(self, logits, labels):
         # correct_predictions = tf.equal(tf.argmax(logits, 1), tf.argmax(labels, 1))
         # return tf.reduce_mean(tf.cast(correct_predictions, tf.float32))
-        return tf.reduce_sum(tf.keras.metrics.sparse_categorical_accuracy(labels, logits)) / self.batch_size
+        return tf.reduce_mean(tf.keras.metrics.sparse_categorical_accuracy(labels, logits))
