@@ -127,3 +127,23 @@ class VisualTransformerModel(keras.Model):
     def accuracy(self):
         pass
 
+class Residual(tf.Module):
+    def __init__(self, fn):
+        super().__init()
+        self.fn = fn
+    def forward(self, x, **kwargs):
+        return self.fn(x, **kwargs) + x
+
+class LayerNormalize(tf.Module): 
+    def __init__(self, dim, fn):
+        super().__init__()
+        self.norm = tf.keras.layers.LayerNormalization(dim)
+        self.fn = fn
+    def forward(self, x, **kwargs): 
+        return self.fn(self.norm(x), **kwargs)
+
+# TODO: ETHAN FINISH MLP_BLOCK
+# class MLP_Block(tf.Module):
+#     def __init__(self, dim, hidden_dim, dropout =0.1):
+#         super().__init__()
+#         self.d1 = tf.keras.
