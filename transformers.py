@@ -47,13 +47,19 @@ class BasicConvolutionBlock(tf.Module):
         return out
 
 class ResidualBlock(tf.Module):
-    def __init__(self):
+    def __init__(self, fn):
+        super().__init__()
+        self.fn = fn 
         pass
 
-    def call(self):
-        pass
+    def call(self, x, **kwargs):
+        return self.fn(x, **kwargs) + x
+        
 
 class LayerNormalize(tf.Module):
+    def __init__(self, dim, fn):
+        super.__init__()
+    
     pass
 
 class MLP_Block(tf.Module):
