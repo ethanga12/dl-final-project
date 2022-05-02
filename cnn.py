@@ -6,13 +6,14 @@ from tensorflow import keras
 from keras import layers
 import numpy as np
 
-class CNNModel(keras.Model):
+class CNNModel(tf.keras.Model):
     """An image classification model that utilizes convolutional neural networks"""
 
-    def init(self):
+    def __init__(self):
         super(CNNModel, self).__init__()
+        # super(tf.keras.Model, self).__init__()
 
-        self.batch_size = 64
+        self.batch_size = 100
         self.num_classes = 10
 
         self.learning_rate = 0.05 
@@ -37,9 +38,11 @@ class CNNModel(keras.Model):
         return logits
 
     def loss(self, logits, labels):
-        loss = tf.math.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(labels, logits)) / self.batch_size
+        # loss = tf.math.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(labels, logits)) #/ 100 #change back to batch size from 100
+        loss = tf.keras.metrics.sparse_categorical_crossentropy(labels, logits, from_logits=True)
         return loss
 
     def accuracy(self, logits, labels):
-        correct_predictions = tf.equal(tf.argmax(logits, 1), tf.argmax(labels, 1))
-        return tf.reduce_mean(tf.cast(correct_predictions, tf.float32))
+        # correct_predictions = tf.equal(tf.argmax(logits, 1), tf.argmax(labels, 1))
+        # return tf.reduce_mean(tf.cast(correct_predictions, tf.float32))
+        return tf.keras.metrics.sparse_categorical_accuracy(labels, logits)

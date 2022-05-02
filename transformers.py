@@ -20,11 +20,32 @@ class BasicConvolutionBlock(tf.Module):
     """
     Layer that runs the input through convolution and dense layers.
     """
+    expansion = 1
+
     def __init__(self, in_planes, planes, kernel_size=3, stride=1, bias=False):
-        pass
+        super(BasicConvolutionBlock, self).__init__()
+        self.conv1 = tf.nn.conv2d(in_planes, planes, stride, padding=1, bais=False)
+        self.bn1 = tf.nn.batch_normalization(planes)
+        self.conv2 = tf.nn.conv2d(planes, planes, kernel_size, stride, padding=1, bias=False)
+        self.bn2 = tf.nn.batch_normalization(planes)
+
+
+        self.shortcut = tf.Sequential()
+        if stride != 1 or in_planes != planes:
+            self.shortcut = keras.Sequential(
+                tf.nn.conv2d(in_planes, self.expansion* planes,kernel_size, stride, bias=False),
+                tf.nn.batch_normalization(self.expansion* planes)
+            )
+        
 
     def call(self, inputs):
-        pass
+        """forward pass for our model"""
+        out = tf.nn.relu(self.bn1(self.conv1(inputs)))
+        out = self.bn2(self.conv2(out))
+        out += self.shortcut(inputs)
+        out = tf.nn.relu(out)
+
+        return out
 
 class ResidualBlock(tf.Module):
     def __init__(self):
@@ -125,3 +146,23 @@ class VisualTransformerModel(keras.Model):
     def accuracy(self):
         pass
 
+class Residual(tf.Module):
+    def __init__(self, fn):
+        super().__init()
+        self.fn = fn
+    def forward(self, x, **kwargs):
+        return self.fn(x, **kwargs) + x
+
+class LayerNormalize(tf.Module): 
+    def __init__(self, dim, fn):
+        super().__init__()
+        self.norm = tf.keras.layers.LayerNormalization(dim)
+        self.fn = fn
+    def forward(self, x, **kwargs): 
+        return self.fn(self.norm(x), **kwargs)
+
+# TODO: ETHAN FINISH MLP_BLOCK
+# class MLP_Block(tf.Module):
+#     def __init__(self, dim, hidden_dim, dropout =0.1):
+#         super().__init__()
+#         self.d1 = tf.keras.
