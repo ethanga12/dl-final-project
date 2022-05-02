@@ -11,7 +11,6 @@ class CNNModel(tf.keras.Model):
 
     def __init__(self):
         super(CNNModel, self).__init__()
-        # super(tf.keras.Model, self).__init__()
 
         self.batch_size = 100
         self.num_classes = 10
@@ -26,11 +25,18 @@ class CNNModel(tf.keras.Model):
         self.model.add(layers.Conv2D(64, (3, 3), activation='relu'))
         self.model.add(layers.MaxPooling2D((2, 2)))
         self.model.add(layers.Conv2D(64, (3, 3), activation='relu'))
+        self.model.add(layers.Flatten())
         self.model.add(layers.Dense(self.hidden_size))
         self.model.add(layers.Dropout(0.3))
         self.model.add(layers.Dense(self.hidden_size))
         self.model.add(layers.Dropout(0.3))
         self.model.add(layers.Dense(self.num_classes))
+
+        self.loss_object = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+        self.train_loss = tf.keras.metrics.Mean(name='train_loss')
+        self.train_accuracy = tf.keras.metrics.SparseCategoricalAccuracy(name='train_accuracy')
+        self.test_loss = tf.keras.metrics.Mean(name='test_loss')
+        self.test_accuracy = tf.keras.metrics.SparseCategoricalAccuracy(name='test_accuracy')
 
 
     def call(self, inputs):
@@ -45,4 +51,4 @@ class CNNModel(tf.keras.Model):
     def accuracy(self, logits, labels):
         # correct_predictions = tf.equal(tf.argmax(logits, 1), tf.argmax(labels, 1))
         # return tf.reduce_mean(tf.cast(correct_predictions, tf.float32))
-        return tf.keras.metrics.sparse_categorical_accuracy(labels, logits)
+        return tf.reduce_sum(tf.keras.metrics.sparse_categorical_accuracy(labels, logits)) / self.batch_size
