@@ -63,7 +63,7 @@ def visualize_inputs(class_names, images, labels):
         plt.subplot(5,5,i+1)
         plt.xticks([])
         plt.yticks([])
-        plt.grid(True)
+        plt.grid(False)
         plt.imshow(images[i])
         plt.xlabel(class_names[labels[i]])
     plt.show()
@@ -88,19 +88,21 @@ def load_cifar_data():
 #################
 
 def main():
-    BATCH_SIZE = 100
     class_names, train_images, train_labels, test_images, test_labels = load_cifar_data()
     # visualize_inputs(class_names, test_images, test_labels)
+    print("train inputs shape: ", train_images.shape, "train labels shape: ", train_labels.shape, "test inputs shape: ", test_images.shape, "test labels shape: ", test_labels.shape)
 
     model = CNNModel()
     num_epochs = 3
 
     for i in range(num_epochs): 
         indices = tf.random.shuffle(tf.Variable(np.arange(train_images.shape[0]))) 
-        train(model, tf.gather(train_images, indices), tf.gather(train_labels, indices), 100)
+        train(model, tf.gather(train_images, indices), tf.gather(train_labels, indices), model.batch_size)
 
-    accuracy = test(model, test_images, test_labels, 100)
+    accuracy = test(model, test_images, test_labels, model.batch_size)
     print("CNN Accuracy: ", accuracy)
+
+    pass
 
 
 if __name__ == '__main__':
