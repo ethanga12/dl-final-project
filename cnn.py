@@ -20,22 +20,21 @@ class CNNModel(tf.keras.Model):
         self.optimizer = tf.keras.optimizers.Adam(self.learning_rate)
         self.hidden_size = 100 
 
-        self.cnn = tf.keras.Sequential()
-        self.cnn.add(tf.keras.layers.Conv2D(32, 3, activation='relu', input_shape=(32, 32, 3)))
-        self.cnn.add(tf.keras.layers.MaxPooling2D((2, 2)))
-        self.cnn.add(tf.keras.layers.Conv2D(64, (3, 3), activation='relu'))
-        self.cnn.add(tf.keras.layers.MaxPooling2D((2, 2)))
-        self.cnn.add(tf.keras.layers.Conv2D(64, (3, 3), activation='relu'))
-        self.cnn.add(tf.keras.layers.Flatten())
-        self.cnn.add(tf.keras.layers.Dense(self.hidden_size))
-        self.cnn.add(tf.keras.layers.Dropout(0.3))
-        self.cnn.add(tf.keras.layers.Dense(self.hidden_size))
-        self.cnn.add(tf.keras.layers.Dropout(0.3))
-        self.cnn.add(tf.keras.layers.Dense(self.num_classes))
+        self.model = tf.keras.Sequential()
+        self.model.add(layers.Conv2D(32, 3, activation='relu', input_shape=(32, 32, 3)))
+        self.model.add(layers.MaxPooling2D((2, 2)))
+        self.model.add(layers.Conv2D(64, (3, 3), activation='relu'))
+        self.model.add(layers.MaxPooling2D((2, 2)))
+        self.model.add(layers.Conv2D(64, (3, 3), activation='relu'))
+        self.model.add(layers.Dense(self.hidden_size))
+        self.model.add(layers.Dropout(0.3))
+        self.model.add(layers.Dense(self.hidden_size))
+        self.model.add(layers.Dropout(0.3))
+        self.model.add(layers.Dense(self.num_classes))
 
 
     def call(self, inputs):
-        logits = self.cnn(inputs)
+        logits = self.model(inputs)
         return logits
 
     def loss(self, logits, labels):
