@@ -52,8 +52,6 @@ def visualize_inputs(class_names, images, labels):
         plt.yticks([])
         plt.grid(False)
         plt.imshow(images[i])
-        # The CIFAR labels happen to be arrays, 
-        # which is why you need the extra index
         plt.xlabel(class_names[labels[i]])
     plt.show()
 
