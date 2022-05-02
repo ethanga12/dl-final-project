@@ -62,5 +62,18 @@ def main():
     class_names, train_images, train_labels, test_images, test_labels = load_cifar_data()
     visualize_inputs(class_names, test_images, test_labels)
 
+    model = CNNModel()
+    num_epochs = 15
+
+    for i in range(num_epochs): 
+        indices = tf.random.shuffle(tf.Variable(np.arange(train_images.shape[0]))) 
+        train(model, tf.gather(train_images, indices), tf.gather(train_labels, indices))
+
+    accuracy = test(model, test_images, test_labels)
+    print("CNN Accuracy: ", accuracy)
+
+    pass
+
+
 if __name__ == '__main__':
     main()
