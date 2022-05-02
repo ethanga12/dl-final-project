@@ -15,7 +15,8 @@ class VisualTransformerModel(keras.Model):
     def init(self):
         super(VisualTransformerModel, self).__init__()
 
-    def call(self, inputs):
+    def call(self, input_images):
+
         pass
 
     def loss(self):
