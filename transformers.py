@@ -25,7 +25,7 @@ class BasicConvolutionBlock(layers.Layer):
 class VisualTransformerModel(keras.Model):
     """An image classification model that utilizes visual transformers"""
 
-    def init(self, image_size: int, patch_size: int, num_classes: int, depth=1, heads=1):
+    def __init__(self, image_size: int, patch_size: int, num_classes: int, depth=1, heads=1):
         """
         :param image_size: greater dimension of image (height/width)
         :param patch_size: number of patches
