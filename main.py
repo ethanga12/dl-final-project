@@ -25,7 +25,8 @@ def train(model: keras.Model, train_inputs, train_labels, batch_size):
     shuffle = tf.random.shuffle(np.arange(num_entries))
     shuffled_inputs = tf.gather(train_inputs, shuffle)
     shuffled_labels = tf.gather(train_inputs, shuffle)
-
+    shuffled_inputs = tf.image.random_flip_left_right(shuffled_inputs)
+     
     for i in range (batch_size, num_entries, batch_size):
         batch_inputs = shuffled_inputs[i - batch_size: i, :, :, :]
         batch_labels = shuffled_labels[i - batch_size: i, :]
