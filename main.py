@@ -12,7 +12,7 @@ import ssl
 import tqdm # for progress bar
 
 from transformers import VisualTransformerModel
-from cnn import CNNModel
+from cnn import CNNModel, create_and_run_cnn
 
 # The following line is to allow us to load the cifar10 dataset without errors
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -87,45 +87,17 @@ def load_cifar_data():
 
 #################
 
+# MAIN
+
 def main():
     class_names, train_images, train_labels, test_images, test_labels = load_cifar_data()
     # visualize_inputs(class_names, test_images, test_labels)
     # print("train inputs shape: ", train_images.shape, "train labels shape: ", train_labels.shape, "test inputs shape: ", test_images.shape, "test labels shape: ", test_labels.shape)
+    create_and_run_cnn(train_images, train_labels, test_images, test_labels)
 
-    hidden_size = 100
-    model = keras.Sequential(
-        layers=[
-                layers.Conv2D(32, 3, activation='relu', input_shape=(32, 32, 3)),
-                layers.MaxPooling2D((2, 2)),
-                layers.Conv2D(64, (3, 3), activation='relu'),
-                layers.MaxPooling2D((2, 2)),
-                layers.Conv2D(64, (3, 3), activation='relu'),
-                layers.Flatten(),
-                layers.Dense(hidden_size),
-                layers.Dropout(0.3),
-                layers.Dense(hidden_size),
-                layers.Dropout(0.3),
-                layers.Dense(10)
-            ]
-    )
-    model.build(input_shape=(train_images.shape))
+    return
 
-    model.summary()
-
-    model.compile(optimizer='adam',
-              loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-              metrics=['accuracy'])
-
-    history = model.fit(train_images, train_labels, epochs=10, 
-                        validation_data=(test_images, test_labels))
-
-    test_loss, test_acc = model.evaluate(test_images,  test_labels, verbose=2)
-
-    print("CNN TEST ACCURACY:", test_acc)
-
-    return 
     cnn = CNNModel()
-
     
     num_epochs = 10
 
@@ -152,6 +124,7 @@ def main():
     # accuracy = test(model, test_images, test_labels, model.batch_size)
     # print("CNN Accuracy: ", accuracy)
 
+#################
 
 if __name__ == '__main__':
     main()
