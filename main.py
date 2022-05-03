@@ -92,17 +92,65 @@ def main():
     # visualize_inputs(class_names, test_images, test_labels)
     # print("train inputs shape: ", train_images.shape, "train labels shape: ", train_labels.shape, "test inputs shape: ", test_images.shape, "test labels shape: ", test_labels.shape)
 
-    model = CNNModel()
+    hidden_size = 100
+    model = keras.Sequential(
+        layers=[
+                layers.Conv2D(32, 3, activation='relu', input_shape=(32, 32, 3)),
+                layers.MaxPooling2D((2, 2)),
+                layers.Conv2D(64, (3, 3), activation='relu'),
+                layers.MaxPooling2D((2, 2)),
+                layers.Conv2D(64, (3, 3), activation='relu'),
+                layers.Flatten(),
+                layers.Dense(hidden_size),
+                layers.Dropout(0.3),
+                layers.Dense(hidden_size),
+                layers.Dropout(0.3),
+                layers.Dense(10)
+            ]
+    )
+    model.build(input_shape=(train_images.shape))
+
+    model.summary()
+
+    model.compile(optimizer='adam',
+              loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+              metrics=['accuracy'])
+
+    history = model.fit(train_images, train_labels, epochs=10, 
+                        validation_data=(test_images, test_labels))
+
+    test_loss, test_acc = model.evaluate(test_images,  test_labels, verbose=2)
+
+    print("CNN TEST ACCURACY:", test_acc)
+
+    return 
+    cnn = CNNModel()
+
+    
     num_epochs = 10
 
-    for i in range(num_epochs): 
-        indices = tf.random.shuffle(tf.Variable(np.arange(train_images.shape[0]))) 
-        train(model, tf.gather(train_images, indices), tf.gather(train_labels, indices), model.batch_size)
+    cnn.model.build(input_shape=(train_images.shape))
 
-    accuracy = test(model, test_images, test_labels, model.batch_size)
-    print("CNN Accuracy: ", accuracy)
+    cnn.model.summary()
 
-    pass
+    cnn.model.compile(
+        optimizer='adam',
+        loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+        metrics=['accuracy']
+    )
+
+    history = cnn.fit(train_images, train_labels, epochs=num_epochs,
+    validation_data=(test_images, test_labels))
+
+    test_loss, test_acc = cnn.evaluate(test_images,  test_labels, verbose=2)
+
+
+    # for i in range(num_epochs): 
+    #     indices = tf.random.shuffle(tf.Variable(np.arange(train_images.shape[0]))) 
+    #     train(model, tf.gather(train_images, indices), tf.gather(train_labels, indices), model.batch_size)
+
+    # accuracy = test(model, test_images, test_labels, model.batch_size)
+    # print("CNN Accuracy: ", accuracy)
 
 
 if __name__ == '__main__':
