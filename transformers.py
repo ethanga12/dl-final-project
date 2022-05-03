@@ -60,11 +60,22 @@ class ResidualBlock(tf.Module):
 class LayerNormalize(tf.Module):
     def __init__(self, dim, fn):
         super.__init__()
-    
-    pass
+        self.norm = layers.LayerNormalization()
+        self.fn = fn
+
+    def call(self, x, **kwargs):
+        return self.fn(self.norm(x), **kwargs)
+
 
 class MLP_Block(tf.Module):
-    pass
+    def __init__(self, dim, hidden_dim, dropout=0.1):
+        super().__init__()
+        self.nn1 = layers.Dense(dim, hidden_dim)
+        # self.af1 = nn.gelu()
+        pass
+
+    def call(self, x):
+        pass
 
 
 class Attention(tf.Module):
