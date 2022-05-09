@@ -200,8 +200,15 @@ class ViTResNet(tf.Module):
 
 
         #THESE ARE PYTORCH PARAMETERS SHOULD BE TRANSLATED
-        self.token_wA = tf.zeros(100, self.L, 64)
-        self.token_wV = tf.zeros(100, 64, self.cT)
+        self.token_wA = tf.Variable(tf.zeros(100, self.L, 64))
+        self.token_wV = tf.Variable(tf.zeros(100, 64, self.cT))
+
+        self.pos_embedding = tf.Variable(tf.random.normal((1, (num_tokens + 1), dim)), stddev =.02) #MIGHT WANT THIS TO BE RANDOM DISTRIBUTION
+        
+        self.cls_token = tf.Variable(tf.zeros(1, 1, dim))
+        self.dropout = tf.keras.layers.dropout(emb_dropout)
+
+        
 
 
         
@@ -212,10 +219,7 @@ class ViTResNet(tf.Module):
             layers.append(block(self.in_planes, planes, stride))
             self.in_planes = planes
         return tf.keras.layers.Sequential(*layers)
-# class MLP_Block(tf.Module):
-#     def __init__(self, dim, hidden_dim, dropout =0.1):
-#         super().__init__()
-#         self.d1 = tf.keras.
+
 
 def train(model, opt, data_loader, loss_history):
     num_samples = len(data_loader.dataset)
