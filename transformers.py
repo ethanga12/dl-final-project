@@ -8,7 +8,6 @@ from tensorflow import keras
 from tensorflow import nn
 from keras import layers
 import numpy as np
-from einops import rearrange
 
 # About tf modules: https://www.tensorflow.org/api_docs/python/tf/Module
 
@@ -60,22 +59,18 @@ class ResidualBlock(tf.Module):
 class LayerNormalize(tf.Module):
     def __init__(self, dim, fn):
         super.__init__()
-        self.norm = layers.LayerNormalization()
+        self.norm = layers.LayerNormalization(dim)
         self.fn = fn
-
-    def call(self, x, **kwargs):
-        return self.fn(self.norm(x), **kwargs)
-
+        
+    def call(self, inputs, **kwargs):
+        return self.fn(self.norm(inputs), **kwargs)
+    pass
 
 class MLP_Block(tf.Module):
     def __init__(self, dim, hidden_dim, dropout=0.1):
         super().__init__()
-        self.nn1 = layers.Dense(dim, hidden_dim)
-        # self.af1 = nn.gelu()
-        pass
-
-    def call(self, x):
-        pass
+        self.
+    pass
 
 
 class Attention(tf.Module):
@@ -83,25 +78,7 @@ class Attention(tf.Module):
         super().__init__()
         self.heads = heads
         self.scale = 1 / tf.square(dims) # dims ** -0.5
-        self.convert_to_qkv = layers.Dense(dims * 3, use_bias=True)
-        self.nn1 = layers.Dense(dims)
-        self.dropout1 = layers.Dropout(dropout)
-
-    def call(self, x, mask=None):
-        b, n, _, h = *x.shape, self.heads
-        qkv = self.convert_to_qkv(x)
-        q, k, v = rearrange(qkv, 'b n (qkv h d) -> qkv b h n d', qkv = 3, h = h) # split into multi-heads
-        dots = tf.einsum('bhid,bhjd->bhij', q, k) * self.scale
-        if mask is not None:
-            pass
-            # TODO
-        attention = tf.nn.softmax(dots, axis=-1)
-        out = tf.einsum('bhij,bhjd->bhid', attention, v) # product of v times whatever inside softmax
-        out = rearrange(out, 'b h n d -> b n (h d)') #concat heads into one matrix, ready for next encoder block
-        out = self.nn1(out)
-        out = self.dropout1(out)
-        return out
-
+        # TODO
 
 class Transformer(tf.Module):
     def __init__(self, dim: int, depth: int, heads: int, mlp_dim: int, dropout):
@@ -183,3 +160,22 @@ class LayerNormalize(tf.Module):
 #     def __init__(self, dim, hidden_dim, dropout =0.1):
 #         super().__init__()
 #         self.d1 = tf.keras.
+
+def train(model, opt, data_loader, loss_history):
+    num_samples = len(data_loader.dataset)
+    model.train()
+
+    for i, (data, target) in enumerate(data_loader):
+        with tf.GradientTape as tape:
+            logits = tf.nn.log_softmax(model(data), axis=1)
+            loss = tf.experimental.nn.losses.negloglik(logits, target)
+    
+        grads = tape.gradient(loss, model.trainable_weights)
+        opt.apply_gradients(zip(grads, model.trainable_weights))
+
+        if i % 200 == 0:
+            print(
+                "Training loss (for one batch) at step %d: %.4f"
+                % (i, float(loss))
+            )
+            print("Seen so far: %s samples" % ((i + 1) * model.batch_size))
