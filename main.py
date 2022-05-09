@@ -6,13 +6,15 @@ transformers model as well as any code to visualize results.
 from matplotlib import pyplot as plt
 import tensorflow as tf
 from tensorflow import keras
-from keras import layers
+from tensorflow.keras import layers
 import numpy as np
 import ssl
 import tqdm # for progress bar
+import sys
+import time
 
 from transformers import VisualTransformerModel
-from cnn import CNNModel, create_and_run_cnn
+from cnn import *
 
 # The following line is to allow us to load the cifar10 dataset without errors
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -91,10 +93,21 @@ def load_cifar_data():
 
 def main():
     class_names, train_images, train_labels, test_images, test_labels = load_cifar_data()
-    # visualize_inputs(class_names, test_images, test_labels)
-    # print("train inputs shape: ", train_images.shape, "train labels shape: ", train_labels.shape, "test inputs shape: ", test_images.shape, "test labels shape: ", test_labels.shape)
-    create_and_run_cnn(train_images, train_labels, test_images, test_labels)
+    # Determine whether to train a new model or use the saved one
+    if len(sys.argv) == 2 and sys.argv[0].lower() == "traincnn":
+        create_and_run_cnn(train_images, train_labels, test_images, test_labels, num_classes=10)
+    else:
+        try:
+            # If no options given, try loading the model first
+            print("Attempting to load saved model:")
+            load_cnn(test_images, test_labels)
+        except:
+            print("Failed to load saved model, training new model")
+            time.sleep(1)
+            create_and_run_cnn(train_images, train_labels, test_images, test_labels, num_classes=10)
 
+    print("Execution successful! Exiting...")
+    
     return
 
     cnn = CNNModel()
