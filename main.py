@@ -93,6 +93,9 @@ def load_cifar_data():
 
 def main():
     class_names, train_images, train_labels, test_images, test_labels = load_cifar_data()
+
+    # CNN MODEL
+
     # Determine whether to train a new model or use the saved one
     if len(sys.argv) == 2 and sys.argv[0].lower() == "traincnn":
         create_and_run_cnn(train_images, train_labels, test_images, test_labels, num_classes=10)
@@ -106,7 +109,11 @@ def main():
             time.sleep(1)
             create_and_run_cnn(train_images, train_labels, test_images, test_labels, num_classes=10)
 
+    
     print("Execution successful! Exiting...")
+
+
+    
     
     return
 
