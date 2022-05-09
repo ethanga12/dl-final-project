@@ -9,6 +9,7 @@ from tensorflow import keras
 from tensorflow import nn
 from keras import layers
 import numpy as np
+import time
 
 # About tf modules: https://www.tensorflow.org/api_docs/python/tf/Module
 
@@ -189,38 +190,58 @@ class ViTResNet(tf.Module):
             self.in_planes = planes
         return tf.keras.layers.Sequential(*layers)
 
-def train(model, opt, data_loader, loss_history):
-    num_samples = len(data_loader.dataset)
-    model.train()
+def train(model, opt, train_inputs, train_labels, loss_history):
+    num_images = train_inputs.shape[0]
 
-    for i, (data, target) in enumerate(data_loader):
-        with tf.GradientTape as tape:
-            logits = tf.nn.log_softmax(model(data), axis=1)
-            loss = tf.experimental.nn.losses.negloglik(logits, target)
-    
+    for i in range (model.batch_size, num_images, model.batch_size):
+        batch_inputs = train_inputs[i - model.batch_size: i, :, :, :]
+        batch_labels = train_labels[i - model.batch_size: i, :]
+        with tf.GradientTape() as tape:
+            logits = tf.nn.log_softmax(model(batch_inputs), axis=1)
+            loss = tf.experimental.nn.losses.negloglik(logits, batch_labels)
+
         grads = tape.gradient(loss, model.trainable_weights)
         opt.apply_gradients(zip(grads, model.trainable_weights))
 
         if i % 200 == 0:
             print(
-                "Training loss (for one batch) at step %d: %.4f"
-                % (i, float(loss))
-            )
+                    "Training loss (for one batch) at step %d: %.4f"
+                    % (i, float(loss))
+                )
             print("Seen so far: %s samples" % ((i + 1) * model.batch_size))
+
+# def train(model, opt, data_loader, loss_history):
+#     num_samples = len(data_loader.dataset)
+#     model.train()
+
+#     for i, (data, target) in enumerate(data_loader):
+#         with tf.GradientTape as tape:
+#             logits = tf.nn.log_softmax(model(data), axis=1)
+#             loss = tf.experimental.nn.losses.negloglik(logits, target)
+    
+#         grads = tape.gradient(loss, model.trainable_weights)
+#         opt.apply_gradients(zip(grads, model.trainable_weights))
+
+#         if i % 200 == 0:
+#             print(
+#                 "Training loss (for one batch) at step %d: %.4f"
+#                 % (i, float(loss))
+#             )
+#             print("Seen so far: %s samples" % ((i + 1) * model.batch_size))
             
 def evaluate(model, test_inputs, test_labels, loss_history): 
     # model.eval() - in PyTorch this notifies the model that we're in eval mode - not sure how to do this in tf
 
     num_images = test_labels.shape[0]
     correct_samples = 0 
-    total_loss = 0 
+    total_loss = 0
 
     for i in range (model.batch_size, num_images, model.batch_size):
         batch_inputs = test_inputs[i - model.batch_size: i, :, :, :]
         batch_labels = test_labels[i - model.batch_size: i, :]
-        output = tf.nn.log_softmax(model.call(batch_inputs)) # need to specify axis=1? 
+        output = tf.nn.log_softmax(model.call(batch_inputs), axis=1) # need to specify axis=1? 
         total_loss += tf.keras.metrics.sparse_categorical_crossentropy(batch_labels, output, from_logits=True)
-        pred = tf.math.reduce_max(output) # need to say axis=1? 
+        pred = tf.math.reduce_max(output, axis=1) # need to say axis=1? 
         correct_samples += tf.math.reduce_sum(tf.math.equal(pred, batch_labels))
     
     avg_loss = total_loss / num_images
@@ -233,9 +254,15 @@ def evaluate(model, test_inputs, test_labels, loss_history):
 
 # Main
 
-def create_and_run_vtmodel(train_images, train_labels, test_images, test_labels, num_classes=10):
+
+def create_and_run_vtmodel(train_images, train_labels, test_images, test_labels):
+    train_loss_history, test_loss_history = [], []
     model = ViTResNet(BasicBlock, [3, 3, 3])
     optimizer = tf.keras.optimizers.Adam(learning_rate=0.003)
     num_epochs = 1
     for epoch in range(1, num_epochs + 1):
         print("Current Epoch: ", epoch)
+        start_time = time.time()
+        train(model, optimizer, train_images, train_labels, train_loss_history)
+        print(f"Epoch", epoch, "finished in", '{:5.2f}'.format(time.time() - start_time), "seconds")
+        evaluate(model, test_images, test_labels, test_loss_history)

@@ -13,7 +13,7 @@ import tqdm # for progress bar
 import sys
 import time
 
-from transformers import VisualTransformerModel
+from transformers import *
 from cnn import *
 
 # The following line is to allow us to load the cifar10 dataset without errors
@@ -93,6 +93,9 @@ def load_cifar_data():
 
 def main():
     class_names, train_images, train_labels, test_images, test_labels = load_cifar_data()
+
+    # ViTResNet Model
+    create_and_run_vtmodel(train_images, train_labels, test_images, test_labels)
 
     # CNN MODEL
 
