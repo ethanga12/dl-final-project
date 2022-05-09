@@ -69,7 +69,6 @@ class CNNModel(tf.keras.Model):
             ]
         )
         
-
         self.loss_object = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
         self.train_loss = tf.keras.metrics.Mean(name='train_loss')
         self.train_accuracy = tf.keras.metrics.SparseCategoricalAccuracy(name='train_accuracy')

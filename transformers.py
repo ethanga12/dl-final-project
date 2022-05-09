@@ -2,6 +2,7 @@
 This file will contain the code specific to the visual transformers
 class.
 """
+from turtle import forward
 from matplotlib import pyplot as plt
 import tensorflow as tf
 from tensorflow import keras
@@ -66,18 +67,6 @@ class LayerNormalize(tf.Module):
     def call(self, x, **kwargs):
         return self.fn(self.norm(x), **kwargs)
 
-
-class MLP_Block(tf.Module):
-    def __init__(self, dim, hidden_dim, dropout=0.1):
-        super().__init__()
-        self.nn1 = layers.Dense(dim, hidden_dim)
-        # self.af1 = nn.gelu()
-        pass
-
-    def call(self, x):
-        pass
-
-
 class Attention(tf.Module):
     def __init__(self, dims, heads=8, dropout=0.1):
         super().__init__()
@@ -92,9 +81,9 @@ class Attention(tf.Module):
         qkv = self.convert_to_qkv(x)
         q, k, v = rearrange(qkv, 'b n (qkv h d) -> qkv b h n d', qkv = 3, h = h) # split into multi-heads
         dots = tf.einsum('bhid,bhjd->bhij', q, k) * self.scale
-        if mask is not None:
-            pass
-            # TODO
+        
+        # if mask is not None: WE'RE NOT DOING THIS
+        #     mask = tf.pad(mask.flatten(1), (1, 0))
         attention = tf.nn.softmax(dots, axis=-1)
         out = tf.einsum('bhij,bhjd->bhid', attention, v) # product of v times whatever inside softmax
         out = rearrange(out, 'b h n d -> b n (h d)') #concat heads into one matrix, ready for next encoder block
@@ -179,7 +168,49 @@ class LayerNormalize(tf.Module):
         return self.fn(self.norm(x), **kwargs)
 
 # TODO: ETHAN FINISH MLP_BLOCK
-# class MLP_Block(tf.Module):
-#     def __init__(self, dim, hidden_dim, dropout =0.1):
-#         super().__init__()
-#         self.d1 = tf.keras.
+class MLP_Block(tf.Module):
+    def __init__(self, dim, hidden_dim, dropout =0.1):
+        super().__init__()
+        self.d1 = tf.keras.layers.Dense(hidden_dim, "gelu")
+        self.dropout = tf.keras.layers.Dropout(dropout)
+        self.d2 = tf.keras.layers.Dense(dim)
+        self.dropout2 = tf.keras.layers.Dropout(dropout)
+    
+    def forward(self, x):
+        x = self.d1(x)
+        x = self.dropout(x)
+        x = self.d2(x)
+        x = self.dropout2(x)
+
+        return x 
+
+class ViTResNet(tf.Module):
+    # BATCH_SIZE_TRAIN = 100
+    # BATCH_SIZE_TEST = 100
+    def __init__(self, block, num_blocks, num_calsses=10, dim = 128, num_tokens = 8, mlp_dim = 256, heads = 8, depth = 6, emb_dropout = 0.1, dropout = 0.1):
+        super(ViTResNet, self).__init__()
+        self.in_planes = 16
+        self.L = num_tokens
+        self.cT = dim
+
+        self.conv1 = tf.keras.layers.Conv2d(3, 16, kernel_size=3, stride=1, padding=1, bias=False)
+        self.bn1 = tf.keras.layers.BatchNormalization(16)
+        self.layer1 = self._make_layer(block, 16, num_blocks[0], stride=1)
+        self.layer2 = self._make_layer(block, 32, num_blocks[1], stride=2)
+        self.layer3 = self._make_layer(block, 64, num_blocks[2], stride=2)
+
+
+        #THESE ARE PYTORCH PARAMETERS SHOULD BE TRANSLATED
+        self.token_wA = tf.zeros(100, self.L, 64)
+        self.token_wV = tf.zeros(100, 64, self.cT)
+
+
+        
+    def _make_layer(self, block, planes, num_blocks, stride):
+        strides = [stride] + [1]*(num_blocks-1)
+        layers = []
+        for stride in strides: 
+            layers.append(block(self.in_planes, planes, stride))
+            self.in_planes = planes
+        return tf.keras.layers.Sequential(*layers)
+
