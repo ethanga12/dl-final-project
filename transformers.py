@@ -183,3 +183,33 @@ class LayerNormalize(tf.Module):
 #     def __init__(self, dim, hidden_dim, dropout =0.1):
 #         super().__init__()
 #         self.d1 = tf.keras.
+
+def evaluate(model, test_inputs, test_labels, loss_history): 
+    # model.eval() - in PyTorch this notifies the model that we're in eval mode - not sure how to do this in tf
+
+    num_images = test_labels.shape[0]
+    correct_samples = 0 
+    total_loss = 0 
+
+    for i in range (model.batch_size, num_images, model.batch_size):
+        batch_inputs = test_inputs[i - model.batch_size: i, :, :, :]
+        batch_labels = test_labels[i - model.batch_size: i, :]
+        output = tf.nn.log_softmax(model.call(batch_inputs)) # need to specify axis=1? 
+        total_loss += tf.keras.metrics.sparse_categorical_crossentropy(batch_labels, output, from_logits=True)
+        pred = tf.math.reduce_max(output) # need to say axis=1? 
+        correct_samples += tf.math.reduce_sum(tf.math.equal(pred, batch_labels))
+    
+    avg_loss = total_loss / num_images
+    loss_history.append(avg_loss)
+    print('\nAverage test loss: ' + '{:.4f}'.format(avg_loss) +
+          '  Accuracy:' + '{:5}'.format(correct_samples) + '/' +
+          '{:5}'.format(num_images) + ' (' +
+          '{:4.2f}'.format(100.0 * correct_samples / num_images) + '%)\n')
+
+
+        
+
+
+
+
+
