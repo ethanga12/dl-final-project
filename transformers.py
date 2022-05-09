@@ -11,10 +11,6 @@ import numpy as np
 
 # About tf modules: https://www.tensorflow.org/api_docs/python/tf/Module
 
-
-
-
-
 class BasicConvolutionBlock(tf.Module):
     """
     Layer that runs the input through convolution and dense layers.
@@ -27,7 +23,6 @@ class BasicConvolutionBlock(tf.Module):
         self.bn1 = tf.nn.batch_normalization(planes)
         self.conv2 = tf.nn.conv2d(planes, planes, kernel_size, stride, padding=1, bias=False)
         self.bn2 = tf.nn.batch_normalization(planes)
-
 
         self.shortcut = tf.Sequential()
         if stride != 1 or in_planes != planes:
@@ -173,6 +168,7 @@ def train(model, opt, data_loader, loss_history):
                 % (i, float(loss))
             )
             print("Seen so far: %s samples" % ((i + 1) * model.batch_size))
+            
 def evaluate(model, test_inputs, test_labels, loss_history): 
     # model.eval() - in PyTorch this notifies the model that we're in eval mode - not sure how to do this in tf
 
