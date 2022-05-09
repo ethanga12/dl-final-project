@@ -12,14 +12,14 @@ import numpy as np
 
 # About tf modules: https://www.tensorflow.org/api_docs/python/tf/Module
 
-class BasicConvolutionBlock(tf.Module):
+class BasicBlock(tf.Module):
     """
     Layer that runs the input through convolution and dense layers.
     """
     expansion = 1
 
     def __init__(self, in_planes, planes, kernel_size=3, stride=1, bias=False):
-        super(BasicConvolutionBlock, self).__init__()
+        super(BasicBlock, self).__init__()
         self.conv1 = tf.nn.conv2d(in_planes, planes, stride, padding=1, bais=False)
         self.bn1 = tf.nn.batch_normalization(planes)
         self.conv2 = tf.nn.conv2d(planes, planes, kernel_size, stride, padding=1, bias=False)
@@ -101,50 +101,32 @@ class Transformer(tf.Module):
             x = mlp(x)
         return x
 
-class VisualTransformerModel(keras.Model):
+class Transformer(keras.Model):
     """An image classification model that utilizes visual transformers"""
 
-    def __init__(self, image_size: int, patch_size: int, num_classes: int, depth=1, heads=1):
+    def __init__(self, dim, depth, heads, mlp_dim, dropout):
         """
-        :param image_size: greater dimension of image (height/width)
-        :param patch_size: number of patches
+        :param dim: greater dimension of image (height/width)
         :param depth: number of transformer blocks
         :param heads: number of heads for attention
+        :param mlp_dim: dimensions for mlp block
+        :param dropout: dropout amount
         """
-        super(VisualTransformerModel, self).__init__()
-        self.image_size = image_size
-        self.patch_size = patch_size
-        self.num_classes = num_classes
+        super().__init__()
+        self.layers = []
+        for _ in range(depth):
+            self.layers.append(Residual(LayerNormalize(dim, Attention(dim, heads=heads, dropout=dropout))))
+            self.layers.append(Residual(LayerNormalize(dim, MLP_Block(dim, mlp_dim, dropout=dropout))))
 
-        # Optimizer
-        self.learning_rate = 0.01
-        self.optimizer = keras.optimizers.Adam(learning_rate=self.learning_rate)
-
-        # Hyperparameters
-        self.hidden_size = None
-
-        # Sequentials
-        first = keras.Sequential(
-            layers=[
-                # filters ~= out_channels
-                layers.Conv2D(filters=16, kernel_size=3, strides=1, padding='same', use_bias=False),
-                layers.BatchNormalization(), # nn.BatchNorm2d(16) in original
-            ])
-
-
-    def call(self, input_images):
+    def call(self, x, mask=None):
         """
         Forward pass with the function
-        :param input_images: tensor of shape [num_inputs, image_size, image_size, channels]
-        :return: probabilities, shape of [num_inputs, num_classes]
+        :param x: tensor of shape [num_inputs, image_size, image_size, channels]
         """
-        pass
-
-    def loss(self):
-        pass
-
-    def accuracy(self):
-        pass
+        for attention, mlp in self.layers:
+            x = attention(x, mask=mask)
+            x = mlp(x)
+        return x
 
 class Residual(tf.Module):
     def __init__(self, fn):
@@ -198,7 +180,6 @@ class ViTResNet(tf.Module):
         self.token_wA = tf.zeros(100, self.L, 64)
         self.token_wV = tf.zeros(100, 64, self.cT)
 
-
         
     def _make_layer(self, block, planes, num_blocks, stride):
         strides = [stride] + [1]*(num_blocks-1)
@@ -207,10 +188,6 @@ class ViTResNet(tf.Module):
             layers.append(block(self.in_planes, planes, stride))
             self.in_planes = planes
         return tf.keras.layers.Sequential(*layers)
-# class MLP_Block(tf.Module):
-#     def __init__(self, dim, hidden_dim, dropout =0.1):
-#         super().__init__()
-#         self.d1 = tf.keras.
 
 def train(model, opt, data_loader, loss_history):
     num_samples = len(data_loader.dataset)
@@ -254,9 +231,11 @@ def evaluate(model, test_inputs, test_labels, loss_history):
           '{:4.2f}'.format(100.0 * correct_samples / num_images) + '%)\n')
 
 
-        
+# Main
 
-
-
-
-
+def create_and_run_vtmodel(train_images, train_labels, test_images, test_labels, num_classes=10):
+    model = ViTResNet(BasicBlock, [3, 3, 3])
+    optimizer = tf.keras.optimizers.Adam(learning_rate=0.003)
+    num_epochs = 1
+    for epoch in range(1, num_epochs + 1):
+        print("Current Epoch: ", epoch)
