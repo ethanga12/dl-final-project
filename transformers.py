@@ -164,7 +164,7 @@ class MLP_Block(tf.Module):
 class ViTResNet(tf.Module):
     # BATCH_SIZE_TRAIN = 100
     # BATCH_SIZE_TEST = 100
-    def __init__(self, block, num_blocks, num_calsses=10, dim = 128, num_tokens = 8, mlp_dim = 256, heads = 8, depth = 6, emb_dropout = 0.1, dropout = 0.1):
+    def __init__(self, block, num_blocks, num_classes=10, dim = 128, num_tokens = 8, mlp_dim = 256, heads = 8, depth = 6, emb_dropout = 0.1, dropout = 0.1):
         super(ViTResNet, self).__init__()
         self.in_planes = 16
         self.L = num_tokens
@@ -178,9 +178,19 @@ class ViTResNet(tf.Module):
 
 
         #THESE ARE PYTORCH PARAMETERS SHOULD BE TRANSLATED
-        self.token_wA = tf.zeros(100, self.L, 64)
-        self.token_wV = tf.zeros(100, 64, self.cT)
+        self.token_wA = tf.Variable(tf.zeros(100, self.L, 64))
+        self.token_wV = tf.Variable(tf.zeros(100, 64, self.cT))
 
+        self.pos_embedding = tf.Variable(tf.random.normal((1, (num_tokens + 1), dim)), stddev =.02) #MIGHT WANT THIS TO BE RANDOM DISTRIBUTION
+        
+        self.cls_token = tf.Variable(tf.zeros(1, 1, dim))
+        self.dropout = tf.keras.layers.dropout(emb_dropout)
+
+        self.transformer = Transformer(dim, depth, heads, mlp_dim, dropout)
+
+        self.to_cls_token = tf.identity() #OF WHAT THOOOOO
+        
+        self.d1 = tf.keras.layers(num_classes)
         
     def _make_layer(self, block, planes, num_blocks, stride):
         strides = [stride] + [1]*(num_blocks-1)
