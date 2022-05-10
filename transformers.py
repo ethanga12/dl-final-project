@@ -24,10 +24,10 @@ class BasicBlock(tf.Module):
         super(BasicBlock, self).__init__()
         # self.conv1 = layers.Conv2D(in_planes, planes, strides=stride, padding="same", use_bias=False)
         self.conv1 = layers.Conv2D(planes, kernel_size, strides=stride, padding="same", use_bias=False)
-        self.bn1 = layers.BatchNormalization(planes)
+        # self.bn1 = layers.BatchNormalization(planes)
         self.conv2 = layers.Conv2D(planes, kernel_size, strides=stride, padding="same", use_bias=False)
         # self.conv2 = layers.Conv2D(planes, planes, kernel_size, strides=stride, padding="same", use_bias=False)
-        self.bn2 = layers.BatchNormalization(planes)
+        # self.bn2 = layers.BatchNormalization(planes)
 
         self.shortcut = keras.Sequential()
         if stride != 1 or in_planes != planes:
@@ -43,9 +43,12 @@ class BasicBlock(tf.Module):
 
     def call(self, inputs):
         """forward pass for our model"""
-        out = tf.nn.relu(self.bn1(self.conv1(inputs)))
-        out = self.bn2(self.conv2(out))
-        out += self.shortcut(inputs)
+        out = tf.nn.relu(self.conv1(inputs))
+        mean, var = tf.nn.moments(out, [0, 1, 2])
+        out = tf.nn.batch_normalization(out, mean, var, 0, 1, variance_epsilon=1e-5)
+        out = self.conv2(out)
+        out = tf.nn.batch_normalization(out, mean, var, 0, 1, variance_epsilon=1e-5)
+        # out += self.shortcut(inputs) MORE BATCH NORMALIZATION STUFF
         out = tf.nn.relu(out)
 
         return out
@@ -182,7 +185,7 @@ class ViTResNet(tf.Module):
         # self.conv1 = tf.keras.layers.Conv2D(3, 16, kernel_size=3, stride=1, padding=1, bias=False)
         # Is this supposed to be valid or same padding
         self.conv1 = tf.keras.layers.Conv2D(16, kernel_size=3, strides=1, padding="same", use_bias=False)
-        self.bn1 = tf.keras.layers.BatchNormalization(16)
+        # self.bn1 = tf.nn.batch_normalization()
         self.layer1 = self._make_layer(block, 16, num_blocks[0], stride=1)
         self.layer2 = self._make_layer(block, 32, num_blocks[1], stride=2)
         self.layer3 = self._make_layer(block, 64, num_blocks[2], stride=2)
@@ -214,7 +217,8 @@ class ViTResNet(tf.Module):
 
     def call(self, img, mask=None):
         x = self.conv1(img)
-        x = self.bn1(x)
+        mean, var = tf.nn.moments(x, [0, 1, 2])
+        x = tf.nn.batch_normalization(x, mean, var, 0, 1, variance_epsilon=1e-5)
         x = tf.nn.relu(x)
         x = self.layer1(x)
         x = self.layer2(x)
