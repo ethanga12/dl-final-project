@@ -10,6 +10,7 @@ from tensorflow import nn
 from keras import layers
 import numpy as np
 import time
+from einops import rearrange
 
 # About tf modules: https://www.tensorflow.org/api_docs/python/tf/Module
 
@@ -176,7 +177,6 @@ class ViTResNet(tf.Module):
         self.layer2 = self._make_layer(block, 32, num_blocks[1], stride=2)
         self.layer3 = self._make_layer(block, 64, num_blocks[2], stride=2)
 
-
         #THESE ARE PYTORCH PARAMETERS SHOULD BE TRANSLATED
         self.token_wA = tf.Variable(tf.zeros(100, self.L, 64))
         self.token_wV = tf.Variable(tf.zeros(100, 64, self.cT))
@@ -188,7 +188,8 @@ class ViTResNet(tf.Module):
 
         self.transformer = Transformer(dim, depth, heads, mlp_dim, dropout)
 
-        self.to_cls_token = tf.identity() #OF WHAT THOOOOO
+        self.to_cls_token = lambda x: tf.identity(x)
+        # tf.identity() #OF WHAT THOOOOO
         
         self.d1 = tf.keras.layers(num_classes)
         
@@ -199,6 +200,28 @@ class ViTResNet(tf.Module):
             layers.append(block(self.in_planes, planes, stride))
             self.in_planes = planes
         return tf.keras.layers.Sequential(*layers)
+
+    def call(self, img, mask=None):
+        x = tf.nn.relu(self.bn1(self.conv1(img)))
+        x = self.layer1(x)
+        x = self.layer2(x)
+        x = self.layer3(x)
+        x = rearrange(x, 'b c h w -> b (h w) c') # 64 vectors each with 64 points. These are the sequences or word vectors like in NLP
+        wa = rearrange(self.token_wA, 'b h w -> b w h')
+        A= tf.einsum('bij,bjk->bik', x, wa) 
+        A = rearrange(A, 'b h w -> b w h') # Transpose
+        A = A.softmax(axis=-1)
+
+        VV= tf.einsum('bij,bjk->bik', x, self.token_wV)       
+        T = tf.einsum('bij,bjk->bik', A, VV)  
+
+        cls_tokens = self.cls_token.expand(img.shape[0], -1, -1)
+        x = tf.concat((cls_tokens, T), axis=1)
+        x += self.pos_embedding
+        x = self.dropout(x)
+        x = self.transformer(x, mask) # main game
+        x = self.to_cls_token(x[:, 0])
+        x = self.nn1(x)
 
 def train(model, opt, train_inputs, train_labels, loss_history):
     num_images = train_inputs.shape[0]
