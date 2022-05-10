@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow import nn
-from keras import layers
+from tensorflow.keras import layers
 import numpy as np
 import time
 from einops import rearrange
@@ -22,17 +22,23 @@ class BasicBlock(tf.Module):
 
     def __init__(self, in_planes, planes, kernel_size=3, stride=1, bias=False):
         super(BasicBlock, self).__init__()
-        self.conv1 = tf.nn.conv2d(in_planes, planes, stride, padding=1, bais=False)
-        self.bn1 = tf.nn.batch_normalization(planes)
-        self.conv2 = tf.nn.conv2d(planes, planes, kernel_size, stride, padding=1, bias=False)
-        self.bn2 = tf.nn.batch_normalization(planes)
+        # self.conv1 = layers.Conv2D(in_planes, planes, strides=stride, padding="same", use_bias=False)
+        self.conv1 = layers.Conv2D(planes, kernel_size, strides=stride, padding="same", use_bias=False)
+        self.bn1 = layers.BatchNormalization(planes)
+        self.conv2 = layers.Conv2D(planes, kernel_size, strides=stride, padding="same", use_bias=False)
+        # self.conv2 = layers.Conv2D(planes, planes, kernel_size, strides=stride, padding="same", use_bias=False)
+        self.bn2 = layers.BatchNormalization(planes)
 
-        self.shortcut = tf.Sequential()
+        self.shortcut = keras.Sequential()
         if stride != 1 or in_planes != planes:
             self.shortcut = keras.Sequential(
-                tf.nn.conv2d(in_planes, self.expansion* planes,kernel_size, stride, bias=False),
-                tf.nn.batch_normalization(self.expansion* planes)
-            )
+                layers=[
+                    # layers.Conv2D(in_planes, self.expansion * planes, kernel_size, stride, use_bias=False),
+                    layers.Conv2D(self.expansion * planes, kernel_size, stride, padding="same", use_bias=False),
+                    layers.BatchNormalization(self.expansion * planes)
+                    # layers.BatchNormalization tf.nn.batch_normalization(self.expansion* planes)
+                    # tf.nn.batch_normalization(self.expansion* planes)
+                ])
         
 
     def call(self, inputs):
@@ -115,24 +121,24 @@ class Transformer(keras.Model):
         :param dropout: dropout amount
         """
         super().__init__()
-        self.layers = []
+        self.transformer_layers = []
         for _ in range(depth):
-            self.layers.append(Residual(LayerNormalize(dim, Attention(dim, heads=heads, dropout=dropout))))
-            self.layers.append(Residual(LayerNormalize(dim, MLP_Block(dim, mlp_dim, dropout=dropout))))
+            self.transformer_layers.append(Residual(LayerNormalize(dim, Attention(dim, heads=heads, dropout=dropout))))
+            self.transformer_layers.append(Residual(LayerNormalize(dim, MLP_Block(dim, mlp_dim, dropout=dropout))))
 
     def call(self, x, mask=None):
         """
         Forward pass with the function
         :param x: tensor of shape [num_inputs, image_size, image_size, channels]
         """
-        for attention, mlp in self.layers:
+        for attention, mlp in self.transformer_layers:
             x = attention(x, mask=mask)
             x = mlp(x)
         return x
 
 class Residual(tf.Module):
     def __init__(self, fn):
-        super().__init()
+        super().__init__()
         self.fn = fn
     def forward(self, x, **kwargs):
         return self.fn(x, **kwargs) + x
@@ -167,31 +173,35 @@ class ViTResNet(tf.Module):
     # BATCH_SIZE_TEST = 100
     def __init__(self, block, num_blocks, num_classes=10, dim = 128, num_tokens = 8, mlp_dim = 256, heads = 8, depth = 6, emb_dropout = 0.1, dropout = 0.1):
         super(ViTResNet, self).__init__()
+
+        self.batch_size = 100
         self.in_planes = 16
         self.L = num_tokens
         self.cT = dim
 
-        self.conv1 = tf.keras.layers.Conv2d(3, 16, kernel_size=3, stride=1, padding=1, bias=False)
+        # self.conv1 = tf.keras.layers.Conv2D(3, 16, kernel_size=3, stride=1, padding=1, bias=False)
+        # Is this supposed to be valid or same padding
+        self.conv1 = tf.keras.layers.Conv2D(16, kernel_size=3, strides=1, padding="same", use_bias=False)
         self.bn1 = tf.keras.layers.BatchNormalization(16)
         self.layer1 = self._make_layer(block, 16, num_blocks[0], stride=1)
         self.layer2 = self._make_layer(block, 32, num_blocks[1], stride=2)
         self.layer3 = self._make_layer(block, 64, num_blocks[2], stride=2)
 
-        #THESE ARE PYTORCH PARAMETERS SHOULD BE TRANSLATED
-        self.token_wA = tf.Variable(tf.zeros(100, self.L, 64))
-        self.token_wV = tf.Variable(tf.zeros(100, 64, self.cT))
+        #THESE ARE PYTORCH PARAMETERS SHOULD BE 
+        self.token_wA = tf.Variable(tf.zeros((100, self.L, 64)))
+        self.token_wV = tf.Variable(tf.zeros((100, 64, self.cT)))
 
-        self.pos_embedding = tf.Variable(tf.random.normal((1, (num_tokens + 1), dim)), stddev =.02) #MIGHT WANT THIS TO BE RANDOM DISTRIBUTION
+        self.pos_embedding = tf.Variable(tf.random.normal((1, (num_tokens + 1), dim), stddev =.02)) #MIGHT WANT THIS TO BE RANDOM DISTRIBUTION
         
         self.cls_token = tf.Variable(tf.zeros(1, 1, dim))
-        self.dropout = tf.keras.layers.dropout(emb_dropout)
+        self.dropout = layers.Dropout(emb_dropout)
 
         self.transformer = Transformer(dim, depth, heads, mlp_dim, dropout)
 
         self.to_cls_token = lambda x: tf.identity(x)
         # tf.identity() #OF WHAT THOOOOO
         
-        self.d1 = tf.keras.layers(num_classes)
+        self.d1 = layers.Dense(num_classes)
         
     def _make_layer(self, block, planes, num_blocks, stride):
         strides = [stride] + [1]*(num_blocks-1)
@@ -199,10 +209,13 @@ class ViTResNet(tf.Module):
         for stride in strides: 
             layers.append(block(self.in_planes, planes, stride))
             self.in_planes = planes
-        return tf.keras.layers.Sequential(*layers)
+        # return keras.Sequential(*layers)
+        return keras.Sequential(layers)
 
     def call(self, img, mask=None):
-        x = tf.nn.relu(self.bn1(self.conv1(img)))
+        x = self.conv1(img)
+        x = self.bn1(x)
+        x = tf.nn.relu(x)
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.layer3(x)
@@ -230,7 +243,8 @@ def train(model, opt, train_inputs, train_labels, loss_history):
         batch_inputs = train_inputs[i - model.batch_size: i, :, :, :]
         batch_labels = train_labels[i - model.batch_size: i, :]
         with tf.GradientTape() as tape:
-            logits = tf.nn.log_softmax(model(batch_inputs), axis=1)
+            logits = tf.nn.log_softmax(model.call(batch_inputs), axis=1)
+            # logits = tf.nn.log_softmax(model.call(batch_inputs))
             loss = tf.experimental.nn.losses.negloglik(logits, batch_labels)
 
         grads = tape.gradient(loss, model.trainable_weights)
@@ -294,7 +308,7 @@ def create_and_run_vtmodel(train_images, train_labels, test_images, test_labels)
     optimizer = tf.keras.optimizers.Adam(learning_rate=0.003)
     num_epochs = 1
     for epoch in range(1, num_epochs + 1):
-        print("Current Epoch: ", epoch)
+        print("Current Epoch:", epoch)
         start_time = time.time()
         train(model, optimizer, train_images, train_labels, train_loss_history)
         print(f"Epoch", epoch, "finished in", '{:5.2f}'.format(time.time() - start_time), "seconds")
