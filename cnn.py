@@ -45,6 +45,7 @@ def create_and_run_cnn(train_images,
     plt.ylabel('loss')
     plt.xlabel('epoch')
     plt.legend(['train', 'test'], loc='upper left')
+    plt.savefig('./visualizations/cnn_loss_graph.png')
     plt.show()
     # Save the model for future use
     model.save(CNN_SAVE_PATH)
