@@ -7,23 +7,39 @@ import tensorflow_addons as tfa
 # from transformers import Transformer
 import matplotlib.pyplot as plt
 import ssl
+import sys
+
 ssl._create_default_https_context = ssl._create_unverified_context
 
-#prepare the data
-num_classes = 100
-input_shape = (32, 32, 3)
+USE_CIFAR100 = False
 
-(x_train, y_train), (x_test, y_test) = keras.datasets.cifar100.load_data()
+# CHECK FOR GPU MODE
+if (len(sys.argv) == 2) and (sys.argv[1].lower() == "gpu"):
+    multigpu_mode = True
+else: 
+    multigpu_mode = False
+num_gpus = len(tf.config.experimental.list_physical_devices('GPU'))
+if multigpu_mode:
+    print("MULTI-GPU MODE,", num_gpus, "GPUs FOUND")
+# ==================
+
+if USE_CIFAR100:
+    (x_train, y_train), (x_test, y_test) = keras.datasets.cifar100.load_data()
+else:
+    (x_train, y_train), (x_test, y_test) = keras.datasets.cifar10.load_data()
 
 print(f"x_train shape: {x_train.shape} - y_train shape: {y_train.shape}")
 print(f"x_test shape: {x_test.shape} - y_test shape: {y_test.shape}")
 
+# prepare the data
+num_classes = 100 if USE_CIFAR100 else 10
+input_shape = (32, 32, 3)
 
 #hyperparameters
-learning_rate = 0.001 
+learning_rate = 0.001 * num_gpus if multigpu_mode else 0.001
 weight_decay = 0.0001
-batch_size = 256 
-num_epochs = 100
+batch_size = 128 * num_gpus
+num_epochs = 10
 image_size = 72
 patch_size = 6
 num_patches = (image_size // patch_size) ** 2
@@ -156,7 +172,7 @@ def run_experiment(model):
         ], 
     )
 
-    checkpoint_filepath = "/tmp/checkpoint"
+    checkpoint_filepath = "./checkpoints"
     checkpoint_callback = keras.callbacks.ModelCheckpoint(
         checkpoint_filepath,
         monitor="val_accuracy",
@@ -180,5 +196,54 @@ def run_experiment(model):
     model.save("./saved_models/trained_keras_vt.h5")
     return history
 
-vit_classifier = create_vit_classifier()
-history = run_experiment(vit_classifier)
+
+def run_experiment_multi_gpu():
+    # Use mirrored strategy to run on multiple GPUs
+    mirrored_strategy = tf.distribute.MirroredStrategy()
+
+    with mirrored_strategy.scope():
+        model = create_vit_classifier()
+        
+        optimizer = tfa.optimizers.AdamW(
+            learning_rate=learning_rate, weight_decay=weight_decay
+        )
+
+        model.compile(
+            optimizer=optimizer,
+            loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+            metrics=[
+                tf.keras.metrics.SparseCategoricalAccuracy(name="accuracy"),
+                tf.keras.metrics.SparseTopKCategoricalAccuracy(5, name="top-5-accuracy"),
+            ], 
+        )
+    
+    checkpoint_filepath = "./checkpoints"
+    checkpoint_callback = keras.callbacks.ModelCheckpoint(
+        checkpoint_filepath,
+        monitor="val_accuracy",
+        save_best_only=True,
+        save_weights_only=True,
+    )
+
+    history = model.fit(
+        x=x_train,
+        y=y_train, 
+        batch_size=batch_size,
+        epochs=num_epochs,
+        validation_split=0.1,
+        callbacks=[checkpoint_callback],
+    )
+
+    model.load_weights(checkpoint_filepath)
+    _, accuracy, top_5_accuracy = model.evaluate(x_test, y_test)
+    print(f"Test accuracy: {round(accuracy * 100, 2)}%")
+    print(f"Test top 5 accuracy: {round(top_5_accuracy * 100, 2)}%")
+    model.save("./saved_models/trained_keras_vt.h5")
+    return history
+
+
+if multigpu_mode:
+    history = run_experiment_multi_gpu()
+else:
+    vit_classifier = create_vit_classifier()
+    history = run_experiment(vit_classifier)
