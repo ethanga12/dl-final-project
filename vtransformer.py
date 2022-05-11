@@ -39,7 +39,7 @@ input_shape = (32, 32, 3)
 #hyperparameters
 learning_rate = 0.001 * num_gpus if multigpu_mode else 0.001
 weight_decay = 0.0001
-batch_size = 128 * num_gpus if num_gpus > 1 else 256
+batch_size = 256
 num_epochs = 10
 image_size = 72
 patch_size = 6

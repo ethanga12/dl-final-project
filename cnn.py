@@ -6,8 +6,6 @@ from tensorflow import keras
 from tensorflow.keras import layers
 from matplotlib import pyplot as plt
 import numpy as np
-# from tensorflow.keras.layers import Dense, Conv2D, MaxPooling2D, Flatten, Dropout
-# import numpy as np
 
 CNN_SAVE_PATH = './saved_models/trained_cnn.h5'
 
@@ -39,7 +37,7 @@ def create_and_run_cnn(train_images,
                       from_logits=True),
                   metrics=['accuracy'])
     print("TRAINING CNN MODEL...")
-    history = model.fit(train_images, train_labels, epochs=10,
+    history = model.fit(train_images, train_labels, epochs=10, batch_size=256,
                         validation_data=(test_images, test_labels))
     plt.plot(history.history['loss'])
     plt.plot(history.history['val_loss'])
