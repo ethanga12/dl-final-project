@@ -312,8 +312,6 @@ def evaluate(model, test_inputs, test_labels, loss_history):
           '{:5}'.format(num_images) + ' (' +
           '{:4.2f}'.format(100.0 * correct_samples / num_images) + '%)\n')
     return pred
-<<<<<<< HEAD
-=======
 
 def visualize_misclassified(test_images, test_labels, predictions, class_names): 
     print("Visualizing data...")
@@ -335,7 +333,6 @@ def visualize_misclassified(test_images, test_labels, predictions, class_names):
     plt.savefig('./visualizations/transformer_misclassified.png')
     plt.show()
 
->>>>>>> 5a9496850c4f3eeaad65cc175b66e9f669c66342
 
 # Main
 
