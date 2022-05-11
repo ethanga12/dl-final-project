@@ -213,6 +213,14 @@ def run_experiment(model):
     model.save("./saved_models/trained_keras_vt.h5")
     pred = model.predict_classes(x_test, verbose=1)
     visualize_misclassified(x_test, y_test, pred, class_names)
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.title('model loss')
+    plt.ylabel('loss')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'test'], loc='upper left')
+    plt.savefig('./visualizations/vtransformer_loss.png')
+    plt.show()
     return history
 
 
