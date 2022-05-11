@@ -1,3 +1,4 @@
+from tabnanny import verbose
 from unicodedata import mirrored
 from unittest.mock import patch
 import numpy as np
@@ -35,11 +36,11 @@ print(f"x_test shape: {x_test.shape} - y_test shape: {y_test.shape}")
 # prepare the data
 num_classes = 100 if USE_CIFAR100 else 10
 input_shape = (32, 32, 3)
-
+class_names = ["airplane", "automobile", "bird", "cat", "deer", "dog", "frog", "horse", "ship", "truck"]
 #hyperparameters
 learning_rate = 0.001 * num_gpus if multigpu_mode else 0.001
 weight_decay = 0.0001
-batch_size = 128 * num_gpus if num_gpus > 1 else 256
+batch_size = 256
 num_epochs = 10
 image_size = 72
 patch_size = 6
@@ -95,6 +96,13 @@ class Patches(layers.Layer):
         patch_dims = patches.shape[-1]
         patches = tf.reshape(patches, [batch_size, -1, patch_dims])
         return patches
+    def get_config(self):
+
+        config = super().get_config().copy()
+        config.update({
+            'patch_size': self.patch_size,
+        })
+        return config
 
 plt.figure(figsize=(4,4))
 image = x_train[np.random.choice(range(x_train.shape[0]))]
@@ -132,7 +140,15 @@ class PatchEncoder(layers.Layer):
         positions = tf.range(start=0, limit=self.num_patches, delta=1)
         encoded = self.projection(patch) + self.position_embedding(positions)
         return encoded
+    
+    def get_config(self):
 
+        config = super().get_config().copy()
+        config.update({
+            'num_patches': self.num_patches,
+            'projection_dim': self.projection,
+        })
+        return config
 
 def create_vit_classifier():
     inputs = layers.Input(shape=input_shape)
@@ -195,6 +211,8 @@ def run_experiment(model):
     print(f"Test accuracy: {round(accuracy * 100, 2)}%")
     print(f"Test top 5 accuracy: {round(top_5_accuracy * 100, 2)}%")
     model.save("./saved_models/trained_keras_vt.h5")
+    pred = model.predict_classes(x_test, verbose=1)
+    visualize_misclassified(x_test, y_test, pred, class_names)
     return history
 
 
@@ -262,9 +280,11 @@ def run_experiment_multi_gpu():
 
     model.load_weights(checkpoint_filepath)
     _, accuracy, top_5_accuracy = model.evaluate(x_test, y_test)
+    
     print(f"Test accuracy: {round(accuracy * 100, 2)}%")
     print(f"Test top 5 accuracy: {round(top_5_accuracy * 100, 2)}%")
     model.save("./saved_models/trained_keras_vt.h5")
+
     return history
 
 
@@ -273,3 +293,23 @@ if multigpu_mode:
 else:
     vit_classifier = create_vit_classifier()
     history = run_experiment(vit_classifier)
+
+def visualize_misclassified(test_images, test_labels, predictions, class_names): 
+    print("Visualizing data...")
+    plt.figure(figsize=(10,10))
+    test_labels = tf.squeeze(test_labels)
+    incorrect_pred = tf.math.subtract(predictions, test_labels)
+    i = 0 
+    num_plotted = 0 
+    while num_plotted < 25:
+        if incorrect_pred[i] != 0: 
+            plt.subplot(5,5,num_plotted+1)
+            plt.xticks([])
+            plt.yticks([])
+            plt.grid(False)
+            plt.imshow(test_images[i])
+            plt.xlabel(class_names[predictions[i]])
+            num_plotted += 1
+        i += 1
+    plt.savefig('./visualizations/transformer_misclassified.png')
+    plt.show()

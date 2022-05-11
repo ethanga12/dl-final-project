@@ -4,8 +4,8 @@ This file will contain the code specific to the CNN class
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
-# from tensorflow.keras.layers import Dense, Conv2D, MaxPooling2D, Flatten, Dropout
-# import numpy as np
+from matplotlib import pyplot as plt
+import numpy as np
 
 CNN_SAVE_PATH = './saved_models/trained_cnn.h5'
 
@@ -37,20 +37,50 @@ def create_and_run_cnn(train_images,
                       from_logits=True),
                   metrics=['accuracy'])
     print("TRAINING CNN MODEL...")
-    history = model.fit(train_images, train_labels, epochs=10,
+    history = model.fit(train_images, train_labels, epochs=10, batch_size=256,
                         validation_data=(test_images, test_labels))
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.title('model loss')
+    plt.ylabel('loss')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'test'], loc='upper left')
+    plt.show()
     # Save the model for future use
     model.save(CNN_SAVE_PATH)
     test_loss, test_acc = model.evaluate(test_images,  test_labels, verbose=2)
     print("CNN TEST ACCURACY:", test_acc)
 
 
-def load_cnn(test_images, test_labels):
+def load_cnn(test_images, test_labels, class_names):
     print("Loading saved CNN model...")
     model = keras.models.load_model(CNN_SAVE_PATH)
     print("Model loaded successfully. Evaluating...")
+    pred = np.argmax(model.predict(test_images), axis = 1) 
+    visualize_misclassified(test_images, test_labels, pred, class_names)
     test_loss, test_acc = model.evaluate(test_images,  test_labels, verbose=2)
     print("CNN TEST ACCURACY:", test_acc)
+
+def visualize_misclassified(test_images, test_labels, predictions, class_names): 
+    print("Visualizing data...")
+    plt.figure(figsize=(10,10))
+    test_labels = tf.squeeze(test_labels)
+    incorrect_pred = tf.math.subtract(predictions, test_labels)
+    i = 0 
+    num_plotted = 0 
+    while num_plotted < 25:
+        if incorrect_pred[i] != 0: 
+            plt.subplot(5,5,num_plotted+1)
+            plt.xticks([])
+            plt.yticks([])
+            plt.grid(False)
+            plt.imshow(test_images[i])
+            plt.xlabel(class_names[predictions[i]])
+            num_plotted += 1
+        i += 1
+    plt.savefig('./visualizations/cnn_misclassified.png')
+    plt.show()
+    
 
 
 # OLD CNN CODE
