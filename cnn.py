@@ -59,19 +59,30 @@ def load_cnn(test_images, test_labels, class_names):
     model = keras.models.load_model(CNN_SAVE_PATH)
     print("Model loaded successfully. Evaluating...")
     pred = np.argmax(model.predict(test_images), axis = 1) 
+    visualize_misclassified(test_images, test_labels, pred, class_names)
+    test_loss, test_acc = model.evaluate(test_images,  test_labels, verbose=2)
+    print("CNN TEST ACCURACY:", test_acc)
+
+def visualize_misclassified(test_images, test_labels, predictions, class_names): 
     print("Visualizing data...")
     plt.figure(figsize=(10,10))
     test_labels = tf.squeeze(test_labels)
-    for i in range(25):
-        plt.subplot(5,5,i+1)
-        plt.xticks([])
-        plt.yticks([])
-        plt.grid(False)
-        plt.imshow(test_images[i])
-        plt.xlabel(class_names[pred[i]])
+    incorrect_pred = tf.math.subtract(predictions, test_labels)
+    i = 0 
+    num_plotted = 0 
+    while num_plotted < 25:
+        if incorrect_pred[i] != 0: 
+            plt.subplot(5,5,num_plotted+1)
+            plt.xticks([])
+            plt.yticks([])
+            plt.grid(False)
+            plt.imshow(test_images[i])
+            plt.xlabel(class_names[predictions[i]])
+            num_plotted += 1
+        i += 1
+    plt.savefig('./visualizations/cnn_misclassified.png')
     plt.show()
-    test_loss, test_acc = model.evaluate(test_images,  test_labels, verbose=2)
-    print("CNN TEST ACCURACY:", test_acc)
+    
 
 
 # OLD CNN CODE

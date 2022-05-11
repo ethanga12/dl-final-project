@@ -313,6 +313,26 @@ def evaluate(model, test_inputs, test_labels, loss_history):
           '{:4.2f}'.format(100.0 * correct_samples / num_images) + '%)\n')
     return pred
 
+def visualize_misclassified(test_images, test_labels, predictions, class_names): 
+    print("Visualizing data...")
+    plt.figure(figsize=(10,10))
+    test_labels = tf.squeeze(test_labels)
+    incorrect_pred = tf.math.subtract(predictions, test_labels)
+    i = 0 
+    num_plotted = 0 
+    while num_plotted < 25:
+        if incorrect_pred[i] != 0: 
+            plt.subplot(5,5,num_plotted+1)
+            plt.xticks([])
+            plt.yticks([])
+            plt.grid(False)
+            plt.imshow(test_images[i])
+            plt.xlabel(class_names[predictions[i]])
+            num_plotted += 1
+        i += 1
+    plt.savefig('./visualizations/transformer_misclassified.png')
+    plt.show()
+
 
 # Main
 
@@ -330,15 +350,5 @@ def create_and_run_vtmodel(train_images, train_labels, test_images, test_labels,
         print(f"Epoch", epoch, "finished in", '{:5.2f}'.format(time.time() - start_time), "seconds")
         pred = np.argmax(evaluate(model, test_images, test_labels, test_loss_history), axis=1)
         if epoch == num_epochs: 
-            print("Visualizing data...")
-            plt.figure(figsize=(10,10))
-            test_labels = tf.squeeze(test_labels)
-            for i in range(25):
-                plt.subplot(5,5,i+1)
-                plt.xticks([])
-                plt.yticks([])
-                plt.grid(False)
-                plt.imshow(test_images[i])
-                plt.xlabel(class_names[pred[i]])
-            plt.show()
+            visualize_misclassified(test_images, test_labels, pred, class_names)
     
