@@ -13,7 +13,7 @@ import tqdm # for progress bar
 import sys
 import time
 
-from transformers import *
+from pyt_transformer import *
 from cnn import *
 
 # The following line is to allow us to load the cifar10 dataset without errors
@@ -100,7 +100,7 @@ def main():
     # CNN MODEL
 
     # Determine whether to train a new model or use the saved one
-    if len(sys.argv) == 2 and sys.argv[0].lower() == "traincnn":
+    if len(sys.argv) == 2 and sys.argv[1].lower() == "traincnn":
         create_and_run_cnn(train_images, train_labels, test_images, test_labels, num_classes=10)
     else:
         try:

@@ -22,10 +22,13 @@ class BasicBlock(tf.Module):
 
     def __init__(self, in_planes, planes, kernel_size=3, stride=1, bias=False):
         super(BasicBlock, self).__init__()
-        # self.conv1 = layers.Conv2D(in_planes, planes, strides=stride, padding="same", use_bias=False)
+        # self.conv1 = layers.Conv2D(in_planes, kernel_size, strides=stride, padding="same", use_bias=False)
         self.conv1 = layers.Conv2D(planes, kernel_size, strides=stride, padding="same", use_bias=False)
-        # self.bn1 = layers.BatchNormalization(planes)
+        self.bn1 = layers.BatchNormalization(axis=1)
         self.conv2 = layers.Conv2D(planes, kernel_size, strides=stride, padding="same", use_bias=False)
+        self.bn2 = layers.BatchNormalization(axis=1)
+        # self.conv1 = layers.Conv2D(in_planes, planes, strides=stride, padding="same", use_bias=False)
+        # self.bn1 = layers.BatchNormalization(planes)
         # self.conv2 = layers.Conv2D(planes, planes, kernel_size, strides=stride, padding="same", use_bias=False)
         # self.bn2 = layers.BatchNormalization(planes)
 
@@ -33,9 +36,9 @@ class BasicBlock(tf.Module):
         if stride != 1 or in_planes != planes:
             self.shortcut = keras.Sequential(
                 layers=[
-                    # layers.Conv2D(in_planes, self.expansion * planes, kernel_size, stride, use_bias=False),
                     layers.Conv2D(self.expansion * planes, kernel_size, stride, padding="same", use_bias=False),
-                    layers.BatchNormalization(self.expansion * planes)
+                    layers.BatchNormalization(axis=1)
+                    # layers.Conv2D(in_planes, self.expansion * planes, kernel_size, stride, use_bias=False),
                     # layers.BatchNormalization tf.nn.batch_normalization(self.expansion* planes)
                     # tf.nn.batch_normalization(self.expansion* planes)
                 ])
@@ -43,14 +46,24 @@ class BasicBlock(tf.Module):
 
     def call(self, inputs):
         """forward pass for our model"""
-        out = tf.nn.relu(self.conv1(inputs))
-        mean, var = tf.nn.moments(out, [0, 1, 2])
-        out = tf.nn.batch_normalization(out, mean, var, 0, 1, variance_epsilon=1e-5)
-        out = self.conv2(out)
-        out = tf.nn.batch_normalization(out, mean, var, 0, 1, variance_epsilon=1e-5)
-        # out += self.shortcut(inputs) MORE BATCH NORMALIZATION STUFF
+        print("BASICBLOCK")
+        out = self.conv1(inputs)
         out = tf.nn.relu(out)
-
+        print("block conv1", out.shape)
+        out = tf.nn.relu(self.conv1(inputs))
+        # mean, var = tf.nn.moments(out, [0, 1, 2])
+        out = self.bn1(out)
+        print("block bn1", out.shape)
+        # out = tf.nn.batch_normalization(out, mean, var, 0, 1, variance_epsilon=1e-5)
+        out = self.conv2(out)
+        print("block conv2", out.shape)
+        out = self.bn2(out)
+        print("block bn2", out.shape)
+        # out = tf.nn.batch_normalization(out, mean, var, 0, 1, variance_epsilon=1e-5)
+        out += self.shortcut(inputs)
+        out = tf.nn.relu(out)
+        print("block added shortcut + relu", out.shape)
+        print("BASICBLOCK END")
         return out
 
 class ResidualBlock(tf.Module):
@@ -184,8 +197,9 @@ class ViTResNet(tf.Module):
 
         # self.conv1 = tf.keras.layers.Conv2D(3, 16, kernel_size=3, stride=1, padding=1, bias=False)
         # Is this supposed to be valid or same padding
-        self.conv1 = tf.keras.layers.Conv2D(16, kernel_size=3, strides=1, padding="same", use_bias=False)
-        # self.bn1 = tf.nn.batch_normalization()
+        # self.conv1 = layers.Conv2D(3, kernel_size=3, strides=1, padding="same", use_bias=False)
+        self.conv1 = layers.Conv2D(16, kernel_size=3, strides=1, padding="same", use_bias=False)
+        self.bn1 = layers.BatchNormalization(axis=1)
         self.layer1 = self._make_layer(block, 16, num_blocks[0], stride=1)
         self.layer2 = self._make_layer(block, 32, num_blocks[1], stride=2)
         self.layer3 = self._make_layer(block, 64, num_blocks[2], stride=2)
@@ -211,23 +225,38 @@ class ViTResNet(tf.Module):
         layers = []
         for stride in strides: 
             layers.append(block(self.in_planes, planes, stride))
-            self.in_planes = planes
+            self.in_planes = planes * block.expansion
         # return keras.Sequential(*layers)
         return keras.Sequential(layers)
 
     def call(self, img, mask=None):
+        # Reshape to match source
+        # img = tf.reshape(img, (-1, 3, 32, 32))
+        print("start", img.shape) # ([100, 3, 32, 32])
         x = self.conv1(img)
-        mean, var = tf.nn.moments(x, [0, 1, 2])
-        x = tf.nn.batch_normalization(x, mean, var, 0, 1, variance_epsilon=1e-5)
+        print("conv1", x.shape)
+        x = self.bn1(x) # 
+        print("bn1", x.shape)
         x = tf.nn.relu(x)
+        print("relu", x.shape)
+        # mean, var = tf.nn.moments(x, [0, 1, 2])
+        # x = tf.nn.batch_normalization(x, mean, var, 0, 1, variance_epsilon=1e-5)
         x = self.layer1(x)
+        print("layer1", x.shape)
         x = self.layer2(x)
+        print("layer2", x.shape)
         x = self.layer3(x)
+        print("layer3", x.shape) # ([100, 64, 8, 8])
+        print(x.shape) # should be ([100, 64, 8, 8])
+        # Reshape like original
+        x = tf.transpose(x, [0, 3, 1, 2])
+        print(x.shape)
         x = rearrange(x, 'b c h w -> b (h w) c') # 64 vectors each with 64 points. These are the sequences or word vectors like in NLP
         wa = rearrange(self.token_wA, 'b h w -> b w h')
         A= tf.einsum('bij,bjk->bik', x, wa) 
         A = rearrange(A, 'b h w -> b w h') # Transpose
         A = A.softmax(axis=-1)
+        print(x.shape) # 
 
         VV= tf.einsum('bij,bjk->bik', x, self.token_wV)       
         T = tf.einsum('bij,bjk->bik', A, VV)  
