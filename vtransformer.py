@@ -1,3 +1,4 @@
+from unicodedata import mirrored
 from unittest.mock import patch
 import numpy as np
 import tensorflow as tf
@@ -38,7 +39,7 @@ input_shape = (32, 32, 3)
 #hyperparameters
 learning_rate = 0.001 * num_gpus if multigpu_mode else 0.001
 weight_decay = 0.0001
-batch_size = 128 * num_gpus
+batch_size = 128 * num_gpus if num_gpus > 1 else 256
 num_epochs = 10
 image_size = 72
 patch_size = 6
@@ -200,10 +201,35 @@ def run_experiment(model):
 def run_experiment_multi_gpu():
     # Use mirrored strategy to run on multiple GPUs
     mirrored_strategy = tf.distribute.MirroredStrategy()
+    print("Number of GPUs:", mirrored_strategy.num_replicas_in_sync)
 
     with mirrored_strategy.scope():
-        model = create_vit_classifier()
-        
+        (x_train, y_train), (x_test, y_test) = keras.datasets.cifar10.load_data()
+        inputs = layers.Input(shape=input_shape)
+        augmented = data_augmentation(inputs)
+        patches = Patches(patch_size)(augmented)
+        encoded_patches = PatchEncoder(num_patches, projection_dim)(patches)
+
+        for _ in range(transformer_layers):
+            x1 = layers.LayerNormalization(epsilon=1e-6)(encoded_patches)
+            attention_output = layers.MultiHeadAttention(
+                num_heads=num_heads, key_dim=projection_dim, dropout=0.1
+            )(x1, x1)
+            x2 = layers.Add()([attention_output, encoded_patches])
+            x3 = layers.LayerNormalization(epsilon=1e-6)(x2)
+            x3 = mlp(x3, hidden_units=transformer_units, dropout_rate=0.1)
+            encoded_patches = layers.Add()([x3, x2])
+
+        representation = layers.LayerNormalization(epsilon=1e-6)(encoded_patches)
+        representation = layers.Flatten()(representation)
+        representation = layers.Dropout(0.5)(representation)
+
+        features = mlp(representation, hidden_units=mlp_head_units, dropout_rate=0.5)
+        logits = layers.Dense(num_classes)(features)
+        model = keras.Model(inputs=inputs, outputs=logits)
+
+        model.build(input_shape = x_train.shape)
+
         optimizer = tfa.optimizers.AdamW(
             learning_rate=learning_rate, weight_decay=weight_decay
         )
@@ -217,13 +243,13 @@ def run_experiment_multi_gpu():
             ], 
         )
     
-    checkpoint_filepath = "./checkpoints"
-    checkpoint_callback = keras.callbacks.ModelCheckpoint(
-        checkpoint_filepath,
-        monitor="val_accuracy",
-        save_best_only=True,
-        save_weights_only=True,
-    )
+        checkpoint_filepath = "./checkpoints"
+        checkpoint_callback = keras.callbacks.ModelCheckpoint(
+            checkpoint_filepath,
+            monitor="val_accuracy",
+            save_best_only=True,
+            save_weights_only=True,
+        )
 
     history = model.fit(
         x=x_train,
