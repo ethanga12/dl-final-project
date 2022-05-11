@@ -181,6 +181,7 @@ class ViTResNet(tf.Module):
         self.in_planes = 16
         self.L = num_tokens
         self.cT = dim
+        self.loss_list = []
 
         # self.conv1 = tf.keras.layers.Conv2D(3, 16, kernel_size=3, stride=1, padding=1, bias=False)
         # Is this supposed to be valid or same padding
@@ -240,6 +241,14 @@ class ViTResNet(tf.Module):
         x = self.to_cls_token(x[:, 0])
         x = self.nn1(x)
 
+def visualize_loss(losses): 
+    x = [i for i in range(len(losses))]
+    plt.plot(x, losses)
+    plt.title('Loss per batch')
+    plt.xlabel('Batch')
+    plt.ylabel('Loss')
+    plt.show()  
+
 def train(model, opt, train_inputs, train_labels, loss_history):
     num_images = train_inputs.shape[0]
 
@@ -250,6 +259,7 @@ def train(model, opt, train_inputs, train_labels, loss_history):
             logits = tf.nn.log_softmax(model.call(batch_inputs), axis=1)
             # logits = tf.nn.log_softmax(model.call(batch_inputs))
             loss = tf.experimental.nn.losses.negloglik(logits, batch_labels)
+            model.loss_list.append(loss)
 
         grads = tape.gradient(loss, model.trainable_weights)
         opt.apply_gradients(zip(grads, model.trainable_weights))
@@ -301,12 +311,13 @@ def evaluate(model, test_inputs, test_labels, loss_history):
           '  Accuracy:' + '{:5}'.format(correct_samples) + '/' +
           '{:5}'.format(num_images) + ' (' +
           '{:4.2f}'.format(100.0 * correct_samples / num_images) + '%)\n')
+    return pred
 
 
 # Main
 
 
-def create_and_run_vtmodel(train_images, train_labels, test_images, test_labels):
+def create_and_run_vtmodel(train_images, train_labels, test_images, test_labels, class_names):
     train_loss_history, test_loss_history = [], []
     model = ViTResNet(BasicBlock, [3, 3, 3])
     optimizer = tf.keras.optimizers.Adam(learning_rate=0.003)
@@ -315,5 +326,19 @@ def create_and_run_vtmodel(train_images, train_labels, test_images, test_labels)
         print("Current Epoch:", epoch)
         start_time = time.time()
         train(model, optimizer, train_images, train_labels, train_loss_history)
+        visualize_loss(model.loss_list)
         print(f"Epoch", epoch, "finished in", '{:5.2f}'.format(time.time() - start_time), "seconds")
-        evaluate(model, test_images, test_labels, test_loss_history)
+        pred = np.argmax(evaluate(model, test_images, test_labels, test_loss_history), axis=1)
+        if epoch == num_epochs: 
+            print("Visualizing data...")
+            plt.figure(figsize=(10,10))
+            test_labels = tf.squeeze(test_labels)
+            for i in range(25):
+                plt.subplot(5,5,i+1)
+                plt.xticks([])
+                plt.yticks([])
+                plt.grid(False)
+                plt.imshow(test_images[i])
+                plt.xlabel(class_names[pred[i]])
+            plt.show()
+    

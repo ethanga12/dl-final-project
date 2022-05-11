@@ -93,24 +93,25 @@ def load_cifar_data():
 
 def main():
     class_names, train_images, train_labels, test_images, test_labels = load_cifar_data()
+    class_names = np.array(class_names)
 
     # ViTResNet Model
-    create_and_run_vtmodel(train_images, train_labels, test_images, test_labels)
+    # create_and_run_vtmodel(train_images, train_labels, test_images, test_labels, class_names)
 
     # CNN MODEL
 
     # Determine whether to train a new model or use the saved one
-    if len(sys.argv) == 2 and sys.argv[0].lower() == "traincnn":
+    if len(sys.argv) == 2 and sys.argv[1].lower() == "traincnn":
         create_and_run_cnn(train_images, train_labels, test_images, test_labels, num_classes=10)
     else:
-        try:
+        # try:
             # If no options given, try loading the model first
-            print("Attempting to load saved model:")
-            load_cnn(test_images, test_labels)
-        except:
-            print("Failed to load saved model, training new model")
-            time.sleep(1)
-            create_and_run_cnn(train_images, train_labels, test_images, test_labels, num_classes=10)
+        print("Attempting to load saved model:")
+        load_cnn(test_images, test_labels, class_names)
+        # except:
+        #     print("Failed to load saved model, training new model")
+        #     time.sleep(1)
+        #     create_and_run_cnn(train_images, train_labels, test_images, test_labels, num_classes=10)
 
     
     print("Execution successful! Exiting...")
