@@ -2,7 +2,7 @@
 ## Image classification using visual transformers
 
 ### Running the project
-
+[Link to final project deliverables (tentative!)](https://github.com/ethanga12/dl-final-project/tree/main/deliverables)
 
 ### Known Bugs
 
