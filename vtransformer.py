@@ -54,6 +54,28 @@ transformer_units = [
 transformer_layers = 8
 mlp_head_units = [2048, 1024]
 
+# VISUALIZATION HELPER
+
+def visualize_misclassified(test_images, test_labels, predictions, class_names): 
+    print("Visualizing data...")
+    plt.figure(figsize=(10,10))
+    test_labels = tf.squeeze(test_labels)
+    incorrect_pred = tf.math.subtract(predictions, test_labels)
+    i = 0 
+    num_plotted = 0 
+    while num_plotted < 25:
+        if incorrect_pred[i] != 0: 
+            plt.subplot(5,5,num_plotted+1)
+            plt.xticks([])
+            plt.yticks([])
+            plt.grid(False)
+            plt.imshow(test_images[i])
+            plt.xlabel(class_names[predictions[i]])
+            num_plotted += 1
+        i += 1
+    plt.savefig('./visualizations/transformer_misclassified.png')
+    plt.show()
+
 #data aug
 
 data_augmentation = keras.Sequential(
@@ -211,8 +233,6 @@ def run_experiment(model):
     print(f"Test accuracy: {round(accuracy * 100, 2)}%")
     print(f"Test top 5 accuracy: {round(top_5_accuracy * 100, 2)}%")
     model.save("./saved_models/trained_keras_vt.h5")
-    pred = model.predict_classes(x_test, verbose=1)
-    visualize_misclassified(x_test, y_test, pred, class_names)
     plt.plot(history.history['loss'])
     plt.plot(history.history['val_loss'])
     plt.title('model loss')
@@ -221,6 +241,8 @@ def run_experiment(model):
     plt.legend(['train', 'test'], loc='upper left')
     plt.savefig('./visualizations/vtransformer_loss.png')
     plt.show()
+    pred = np.argmax(model.predict(x_test), axis = 1) 
+    visualize_misclassified(x_test, y_test, pred, class_names)
     return history
 
 
@@ -302,22 +324,3 @@ else:
     vit_classifier = create_vit_classifier()
     history = run_experiment(vit_classifier)
 
-def visualize_misclassified(test_images, test_labels, predictions, class_names): 
-    print("Visualizing data...")
-    plt.figure(figsize=(10,10))
-    test_labels = tf.squeeze(test_labels)
-    incorrect_pred = tf.math.subtract(predictions, test_labels)
-    i = 0 
-    num_plotted = 0 
-    while num_plotted < 25:
-        if incorrect_pred[i] != 0: 
-            plt.subplot(5,5,num_plotted+1)
-            plt.xticks([])
-            plt.yticks([])
-            plt.grid(False)
-            plt.imshow(test_images[i])
-            plt.xlabel(class_names[predictions[i]])
-            num_plotted += 1
-        i += 1
-    plt.savefig('./visualizations/transformer_misclassified.png')
-    plt.show()
